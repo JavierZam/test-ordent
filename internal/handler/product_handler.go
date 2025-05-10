@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -32,7 +31,7 @@ func NewProductHandler(productRepo repository.ProductRepository) *ProductHandler
 // @Param category_id query int false "Filter by category ID"
 // @Param page query int false "Page number"
 // @Param limit query int false "Items per page"
-// @Success 200 {object} model.PaginatedResponse
+// @Success 200 {object} model.ProductsResponse
 // @Router /products [get]
 func (h *ProductHandler) GetProducts(c echo.Context) error {
 	products, err := h.productRepo.FindAll()
@@ -86,12 +85,8 @@ func (h *ProductHandler) GetProduct(c echo.Context) error {
 func (h *ProductHandler) CreateProduct(c echo.Context) error {
     var req model.ProductRequest
     if err := c.Bind(&req); err != nil {
-        fmt.Printf("Binding error: %v\n", err)
         return c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "Invalid request"})
     }
-
-    // Log request
-    fmt.Printf("Create product request: %+v\n", req)
     
     // Validate request
     if req.Name == "" {
@@ -108,7 +103,6 @@ func (h *ProductHandler) CreateProduct(c echo.Context) error {
 
     product, err := h.productRepo.Create(&req)
     if err != nil {
-        fmt.Printf("Repository error: %v\n", err)
         return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to create product"})
     }
 

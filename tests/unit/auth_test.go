@@ -7,42 +7,128 @@ import (
 	"test-ordent/internal/auth"
 )
 
-func TestGenerateAndValidateToken(t *testing.T) {
+func TestGenerateToken(t *testing.T) {
+	// Test cases
+	testCases := []struct {
+		name     string
+		userID   uint
+		role     string
+		secret   string
+		expected bool // true if we expect token generation to succeed
+	}{
+		{
+			name:     "Valid token generation",
+			userID:   1,
+			role:     "admin",
+			secret:   "test_secret",
+			expected: true,
+		},
+		{
+			name:     "Empty secret",
+			userID:   1,
+			role:     "admin",
+			secret:   "",
+			expected: true, // It will still generate a token, but it may not be secure
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			token, err := auth.GenerateToken(tc.userID, tc.role, tc.secret, 24*time.Hour)
+			
+			if tc.expected && (err != nil || token == "") {
+				t.Errorf("Expected token generation to succeed, but got error: %v", err)
+			}
+			
+			if !tc.expected && (err == nil && token != "") {
+				t.Errorf("Expected token generation to fail, but it succeeded")
+			}
+		})
+	}
+}
+
+func TestValidateToken(t *testing.T) {
+	// Setup
 	secret := "test_secret"
 	userID := uint(1)
 	role := "admin"
-	expiry := time.Hour * 24
-
-	// Generate token
-	token, err := auth.GenerateToken(userID, role, secret, expiry)
+	
+	// Generate a valid token
+	validToken, err := auth.GenerateToken(userID, role, secret, 24*time.Hour)
 	if err != nil {
-		t.Fatalf("Failed to generate token: %v", err)
+		t.Fatalf("Failed to generate token for testing: %v", err)
 	}
-
-	// Validate token
-	claims, err := auth.ValidateToken(token, secret)
+	
+	// Generate an expired token
+	expiredToken, err := auth.GenerateToken(userID, role, secret, -1*time.Hour) // Negative duration for expired token
 	if err != nil {
-		t.Fatalf("Failed to validate token: %v", err)
+		t.Fatalf("Failed to generate expired token for testing: %v", err)
 	}
-
-	// Check claims
-	if claims.UserID != userID {
-		t.Errorf("Expected UserID to be %d, got %d", userID, claims.UserID)
+	
+	// Test cases
+	testCases := []struct {
+		name     string
+		token    string
+		secret   string
+		expected bool // true if we expect validation to succeed
+	}{
+		{
+			name:     "Valid token",
+			token:    validToken,
+			secret:   secret,
+			expected: true,
+		},
+		{
+			name:     "Invalid token format",
+			token:    "invalid.token.format",
+			secret:   secret,
+			expected: false,
+		},
+		{
+			name:     "Empty token",
+			token:    "",
+			secret:   secret,
+			expected: false,
+		},
+		{
+			name:     "Wrong secret",
+			token:    validToken,
+			secret:   "wrong_secret",
+			expected: false,
+		},
+		{
+			name:     "Expired token",
+			token:    expiredToken,
+			secret:   secret,
+			expected: false,
+		},
 	}
-
-	if claims.Role != role {
-		t.Errorf("Expected Role to be %s, got %s", role, claims.Role)
-	}
-
-	// Check invalid token
-	_, err = auth.ValidateToken("invalid.token.string", secret)
-	if err == nil {
-		t.Error("Expected error for invalid token, got nil")
-	}
-
-	// Check wrong secret
-	_, err = auth.ValidateToken(token, "wrong_secret")
-	if err == nil {
-		t.Error("Expected error for wrong secret, got nil")
+	
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			claims, err := auth.ValidateToken(tc.token, tc.secret)
+			
+			if tc.expected {
+				if err != nil {
+					t.Errorf("Expected token validation to succeed, but got error: %v", err)
+				}
+				
+				if claims == nil {
+					t.Errorf("Expected claims to be non-nil")
+				} else {
+					if claims.UserID != userID {
+						t.Errorf("Expected UserID to be %d, got %d", userID, claims.UserID)
+					}
+					
+					if claims.Role != role {
+						t.Errorf("Expected Role to be %s, got %s", role, claims.Role)
+					}
+				}
+			} else {
+				if err == nil {
+					t.Errorf("Expected token validation to fail, but it succeeded")
+				}
+			}
+		})
 	}
 }

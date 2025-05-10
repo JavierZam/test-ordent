@@ -1,4 +1,3 @@
-// internal/handler/order_handler.go
 package handler
 
 import (
@@ -27,6 +26,7 @@ func NewOrderHandler(orderRepo repository.OrderRepository, cartRepo repository.C
         db:          db,
     }
 }
+
 // CreateOrder godoc
 // @Summary Create a new order
 // @Description Create a new order from cart items
@@ -117,7 +117,6 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
     return c.JSON(http.StatusCreated, order)
 }
 
-
 // GetOrders godoc
 // @Summary Get user orders
 // @Description Get a list of user's orders
@@ -148,4 +147,3 @@ func (h *OrderHandler) GetOrders(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, model.OrdersResponse{Orders: orders})
 }
-

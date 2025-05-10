@@ -1,4 +1,3 @@
-// cmd/server/main.go
 package main
 
 import (
@@ -12,7 +11,7 @@ import (
 	echoSwagger "github.com/swaggo/echo-swagger"
 
 	"test-ordent/config"
-	// _ "test-ordent/docs"
+	_ "test-ordent/docs"
 	"test-ordent/internal/auth"
 	"test-ordent/internal/database"
 	"test-ordent/internal/handler"
@@ -31,6 +30,10 @@ import (
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 // @host localhost:8080
 // @BasePath /api
+// @securityDefinitions.apiKey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and the JWT token.
 func main() {
 	// Load configuration
 	cfg, err := loadConfig()
@@ -40,8 +43,6 @@ func main() {
 	if cfg.Auth.JWTSecret == "" {
 		log.Fatal("JWT secret cannot be empty")
 	}
-
-	log.Printf("JWT Secret length: %d", len(cfg.Auth.JWTSecret))
 
 	// Initialize logger
 	logger := initLogger(cfg.Server.Debug)
@@ -85,6 +86,7 @@ func main() {
 	api.PUT("/products/:id", productHandler.UpdateProduct, jwtMiddleware.RequireAdmin)
 	api.DELETE("/products/:id", productHandler.DeleteProduct, jwtMiddleware.RequireAdmin)
 
+	// Cart routes
 	cartHandler := handler.NewCartHandler(cartRepo, productRepo, db)
 	api.GET("/cart", cartHandler.GetCart, jwtMiddleware.RequireAuth)
 	api.POST("/cart/items", cartHandler.AddItem, jwtMiddleware.RequireAuth)
@@ -95,6 +97,7 @@ func main() {
     api.POST("/orders", orderHandler.CreateOrder, jwtMiddleware.RequireAuth)
     api.GET("/orders", orderHandler.GetOrders, jwtMiddleware.RequireAuth)
 
+	// Categories routes
 	api.GET("/categories", func(c echo.Context) error {
 		rows, err := db.Query("SELECT id, name, description FROM categories")
 		if err != nil {
@@ -121,6 +124,7 @@ func main() {
 		})
 	})
 
+	// Swagger documentation
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
 	// Start server

@@ -147,8 +147,8 @@ func (r *PostgresOrderRepository) CreateOrder(userID uint, total float64, shippi
     // Create order
     var orderID uint
     err = tx.QueryRow(`
-        INSERT INTO orders (user_id, total, shipping_address, status, created_at, updated_at)
-        VALUES ($1, $2, $3, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        INSERT INTO orders (user_id, total_amount, status, shipping_address, created_at, updated_at)
+        VALUES ($1, $2, 'pending', $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         RETURNING id
     `, userID, total, shippingAddress).Scan(&orderID)
     

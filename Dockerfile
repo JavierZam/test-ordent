@@ -1,8 +1,11 @@
-# Dockerfile
-FROM golang:1.19-alpine AS builder
+# Build stage
+FROM golang:1.20-alpine AS builder
 
 # Set working directory
 WORKDIR /app
+
+# Install necessary build tools
+RUN apk add --no-cache git
 
 # Copy go mod and sum files
 COPY go.mod go.sum ./
@@ -14,23 +17,35 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o test-ordent .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app ./cmd/server/main.go
 
-# Create smaller final image
-FROM alpine:latest  
+# Final stage
+FROM alpine:latest
 
-# Set working directory
-WORKDIR /root/
+# Install necessary runtime dependencies
+RUN apk --no-cache add ca-certificates tzdata
 
-# Copy the binary from builder
-COPY --from=builder /app/test-ordent .
-COPY --from=builder /app/config.yaml .
+# Create non-root user
+RUN adduser -D -g '' appuser
 
-# Create uploads directory
-RUN mkdir -p ./uploads
+# Create necessary directories
+WORKDIR /app
+RUN mkdir -p /app/uploads
+
+# Copy built binary and config
+COPY --from=builder /app/app /app/
+COPY --from=builder /app/config/config.yaml /app/config/
+COPY --from=builder /app/docs /app/docs
+
+# Set proper permissions
+RUN chown -R appuser:appuser /app
+USER appuser
 
 # Expose port
 EXPOSE 8080
 
-# Command to run the executable
-CMD ["./test-ordent"]
+# Set environment variables
+ENV CONFIG_PATH="/app/config/config.yaml"
+
+# Command to run the application
+CMD ["/app/app"]

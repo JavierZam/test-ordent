@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -35,7 +34,6 @@ func (m *JWTMiddleware) RequireAuth(next echo.HandlerFunc) echo.HandlerFunc {
 
         // Get token from header
         authHeader := c.Request().Header.Get("Authorization")
-        fmt.Printf("Authorization header: %s\n", authHeader)
         
         if authHeader == "" {
             return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Error: "Authorization header is required"})
@@ -49,30 +47,27 @@ func (m *JWTMiddleware) RequireAuth(next echo.HandlerFunc) echo.HandlerFunc {
 
         // Validate token
         token := parts[1]
-        fmt.Printf("Token: %s\n", token[:10] + "...")
-        fmt.Printf("JWT Secret length: %d\n", len(m.jwtSecret))  // Safer than printing part of secret
         
         claims, err := ValidateToken(token, m.jwtSecret)
         if err != nil {
-            fmt.Printf("Token validation error: %v\n", err)
             return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Error: "Invalid token"})
         }
 
         // Set user info to context
-        fmt.Printf("Validated user ID: %d, role: %s\n", claims.UserID, claims.Role)
         c.Set("user_id", claims.UserID)
-        c.Set("user_role", claims.Role)
+        c.Set("role", claims.Role)
 
         return next(c)
     }
 }
+
 // RequireAdmin middleware requires admin role
 func (m *JWTMiddleware) RequireAdmin(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		// First require auth
 		err := m.RequireAuth(func(c echo.Context) error {
 			// Check user role
-			role, ok := c.Get("user_role").(string)
+			role, ok := c.Get("role").(string)
 			if !ok || role != "admin" {
 				return c.JSON(http.StatusForbidden, model.ErrorResponse{Error: "Admin role required"})
 			}

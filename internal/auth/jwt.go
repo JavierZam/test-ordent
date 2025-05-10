@@ -2,7 +2,6 @@ package auth
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -41,19 +40,14 @@ func GenerateToken(userID uint, role, secret string, expiry time.Duration) (stri
 
 // ValidateToken validates a JWT token
 func ValidateToken(tokenString, secret string) (*JWTClaims, error) {
-    // Tambahkan log untuk debug
-    fmt.Printf("Validating token: %s...\n", tokenString[:10])
-    fmt.Printf("Secret length: %d\n", len(secret))
-
     token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
         if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-            return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+            return nil, errors.New("unexpected signing method")
         }
         return []byte(secret), nil
     })
 
     if err != nil {
-        fmt.Printf("Token parse error: %v\n", err)
         return nil, err
     }
 
@@ -62,6 +56,5 @@ func ValidateToken(tokenString, secret string) (*JWTClaims, error) {
         return nil, errors.New("invalid token")
     }
 
-    fmt.Printf("Token valid for user %d with role %s\n", claims.UserID, claims.Role)
     return claims, nil
 }

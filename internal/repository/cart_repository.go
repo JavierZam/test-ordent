@@ -42,7 +42,7 @@ func (r *PostgresCartRepository) FindByUserID(userID uint) (*model.Cart, error) 
     
     if err != nil {
         if err == sql.ErrNoRows {
-            return nil, nil
+            return nil, nil // It's normal to not have a cart yet
         }
         return nil, err
     }
@@ -63,6 +63,7 @@ func (r *PostgresCartRepository) Create(userID uint) (uint, error) {
     }
     return id, nil
 }
+
 // GetCartItems gets cart items with product details
 func (r *PostgresCartRepository) GetCartItems(cartID uint) ([]model.CartItemDetail, error) {
 	rows, err := r.db.Query(`
@@ -167,12 +168,7 @@ func (r *PostgresCartRepository) FindCartItemByID(itemID uint) (*model.CartItem,
         return nil, err
     }
     
-    // Handle nullable updated_at
-    if updatedAt.Valid {
-        t := updatedAt.Time
-        item.UpdatedAt = &t
-    }
-    
+    item.UpdatedAt = util.NullTimeToPointer(updatedAt)
     return &item, nil
 }
 
@@ -192,12 +188,7 @@ func (r *PostgresCartRepository) FindCartItemByProductID(cartID uint, productID 
         return nil, err
     }
     
-    // Handle nullable updated_at
-    if updatedAt.Valid {
-        t := updatedAt.Time
-        item.UpdatedAt = &t
-    }
-    
+    item.UpdatedAt = util.NullTimeToPointer(updatedAt)
     return &item, nil
 }
 

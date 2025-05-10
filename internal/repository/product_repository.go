@@ -3,7 +3,6 @@ package repository
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"time"
 
 	"test-ordent/internal/model"
@@ -74,8 +73,6 @@ func (r *PostgresProductRepository) FindByID(id int) (*model.ProductResponse, er
 }
 
 func (r *PostgresProductRepository) Create(product *model.ProductRequest) (*model.ProductResponse, error) {
-    fmt.Println("Trying to create product:", product.Name)
-    
     var p model.ProductResponse
     var updatedAt sql.NullTime  // Use sql.NullTime for nullable time columns
     
@@ -87,20 +84,18 @@ func (r *PostgresProductRepository) Create(product *model.ProductRequest) (*mode
     ).Scan(&p.ID, &p.Name, &p.Description, &p.Price, &p.Stock, &p.CategoryID, &p.ImageURL, &p.CreatedAt, &updatedAt)
 
     if err != nil {
-        fmt.Printf("Error creating product: %v\n", err)
         return nil, err
     }
     
     // Convert sql.NullTime to *time.Time
     if updatedAt.Valid {
-        t := updatedAt.Time  // Tipe: time.Time
-        p.UpdatedAt = &t     // Tipe: *time.Time 
+        t := updatedAt.Time
+        p.UpdatedAt = &t
     } else {
-        t := time.Now()      // Tipe: time.Time
-        p.UpdatedAt = &t     // Tipe: *time.Time
+        t := time.Now()
+        p.UpdatedAt = &t
     }
 
-    fmt.Println("Product created successfully with ID:", p.ID)
     return &p, nil
 }
 
@@ -154,24 +149,18 @@ func (r *PostgresProductRepository) ExistsByID(id int) (bool, error) {
 }
 
 func (r *PostgresProductRepository) DecreaseStock(id int, amount int) error {
-    fmt.Printf("Executing SQL to decrease stock for product %d by %d\n", id, amount)
-    
     result, err := r.db.Exec(
         "UPDATE products SET stock = stock - $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND stock >= $1", 
         amount, id)
     
     if err != nil {
-        fmt.Printf("SQL error in DecreaseStock: %v\n", err)
         return err
     }
     
     rowsAffected, err := result.RowsAffected()
     if err != nil {
-        fmt.Printf("Error getting rows affected: %v\n", err)
         return err
     }
-    
-    fmt.Printf("DecreaseStock affected %d rows\n", rowsAffected)
     
     if rowsAffected == 0 {
         return errors.New("not enough stock or product not found")

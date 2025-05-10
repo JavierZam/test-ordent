@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"log"
 	"net/http"
 	"time"
 
@@ -60,10 +59,8 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	// Generate JWT token
 	token, err := auth.GenerateToken(user.ID, user.Role, h.jwtSecret, h.tokenExpiry)
 	if err != nil {
-		log.Printf("Failed to generate token: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to generate token"})
 	}
-	log.Printf("Generated token for user %d with role %s", user.ID, user.Role)
 
 	return c.JSON(http.StatusOK, model.LoginResponse{
 		Token: token,
