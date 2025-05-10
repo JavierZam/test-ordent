@@ -30,6 +30,41 @@
    - Aplikasi dapat di-deploy menggunakan Docker
    - Lingkungan pengembangan menggunakan Go versi 1.20
 
+## Arsitektur
+
+Aplikasi mengikuti arsitektur berlapis seperti yang ditunjukkan di bawah ini:
+
+![Diagram Arsitektur](./docs/arsitektur.png)
+
+### Komponen:
+
+- **Echo Web Framework**: Menangani routing HTTP dan eksekusi middleware
+- **Konfigurasi**: Konfigurasi berbasis YAML untuk aplikasi
+- **Autentikasi**: Sistem autentikasi berbasis JWT
+- **Handler**: Memproses permintaan HTTP dan menghasilkan respons
+- **Middleware**: Menyediakan fitur seperti autentikasi, logging
+- **Layer Repository**: Mengabstraksi operasi database
+- **Database PostgreSQL**: Menyimpan semua data aplikasi
+
+## Setup dan Instalasi
+
+### Prasyarat
+
+- Go 1.20 atau lebih baru
+- PostgreSQL
+- Docker (opsional)
+
+### Menjalankan Aplikasi Secara Lokal
+
+1. Clone repositori
+2. Salin `.env.example` ke `.env` dan sesuaikan dengan lingkungan Anda
+3. Buat database PostgreSQL
+4. Jalankan migrasi database (file SQL tersedia di direktori `migrations`)
+5. Jalankan aplikasi:
+   ```bash
+   go run cmd/server/main.go
+   ```
+
 ## Setup dan Instalasi
 
 ### Prasyarat
