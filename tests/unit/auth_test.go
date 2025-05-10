@@ -8,13 +8,12 @@ import (
 )
 
 func TestGenerateToken(t *testing.T) {
-	// Test cases
 	testCases := []struct {
 		name     string
 		userID   uint
 		role     string
 		secret   string
-		expected bool // true if we expect token generation to succeed
+		expected bool
 	}{
 		{
 			name:     "Valid token generation",
@@ -28,7 +27,7 @@ func TestGenerateToken(t *testing.T) {
 			userID:   1,
 			role:     "admin",
 			secret:   "",
-			expected: true, // It will still generate a token, but it may not be secure
+			expected: true,
 		},
 	}
 
@@ -48,29 +47,25 @@ func TestGenerateToken(t *testing.T) {
 }
 
 func TestValidateToken(t *testing.T) {
-	// Setup
 	secret := "test_secret"
 	userID := uint(1)
 	role := "admin"
 	
-	// Generate a valid token
 	validToken, err := auth.GenerateToken(userID, role, secret, 24*time.Hour)
 	if err != nil {
 		t.Fatalf("Failed to generate token for testing: %v", err)
 	}
 	
-	// Generate an expired token
-	expiredToken, err := auth.GenerateToken(userID, role, secret, -1*time.Hour) // Negative duration for expired token
+	expiredToken, err := auth.GenerateToken(userID, role, secret, -1*time.Hour)
 	if err != nil {
 		t.Fatalf("Failed to generate expired token for testing: %v", err)
 	}
 	
-	// Test cases
 	testCases := []struct {
 		name     string
 		token    string
 		secret   string
-		expected bool // true if we expect validation to succeed
+		expected bool
 	}{
 		{
 			name:     "Valid token",

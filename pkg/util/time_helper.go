@@ -5,7 +5,6 @@ import (
 	"time"
 )
 
-// NullTimeToPointer converts sql.NullTime to *time.Time
 func NullTimeToPointer(t sql.NullTime) *time.Time {
     if t.Valid {
         v := t.Time
@@ -14,7 +13,6 @@ func NullTimeToPointer(t sql.NullTime) *time.Time {
     return nil
 }
 
-// PointerToNullTime converts *time.Time to sql.NullTime
 func PointerToNullTime(t *time.Time) sql.NullTime {
     if t == nil {
         return sql.NullTime{Valid: false}

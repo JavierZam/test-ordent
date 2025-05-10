@@ -14,7 +14,6 @@ type Product struct {
     UpdatedAt   time.Time `json:"updated_at"`
 }
 
-// ProductRequest represents product create/update request payload
 type ProductRequest struct {
 	Name        string  `json:"name" validate:"required"`
 	Description string  `json:"description"`
@@ -33,10 +32,9 @@ type ProductResponse struct {
     CategoryID  int        `json:"category_id"`
     ImageURL    string     `json:"image_url"`
     CreatedAt   time.Time  `json:"created_at"`
-    UpdatedAt   *time.Time `json:"updated_at,omitempty"` // Use pointer to handle NULL
+    UpdatedAt   *time.Time `json:"updated_at,omitempty"`
 }
 
-// ProductsResponse represents multiple products response
 type ProductsResponse struct {
 	Products []ProductResponse `json:"products"`
 	Total    int               `json:"total"`

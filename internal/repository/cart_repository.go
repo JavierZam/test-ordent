@@ -8,7 +8,6 @@ import (
 	"test-ordent/pkg/util"
 )
 
-// CartRepository defines cart related database operations
 type CartRepository interface {
 	FindByUserID(userID uint) (*model.Cart, error)
 	Create(userID uint) (uint, error)
@@ -23,12 +22,10 @@ type CartRepository interface {
 	ClearCart(cartID uint) error
 }
 
-// PostgresCartRepository implements CartRepository with PostgreSQL
 type PostgresCartRepository struct {
 	db *sql.DB
 }
 
-// NewCartRepository creates a new cart repository
 func NewCartRepository(db *sql.DB) CartRepository {
 	return &PostgresCartRepository{db: db}
 }
@@ -42,7 +39,7 @@ func (r *PostgresCartRepository) FindByUserID(userID uint) (*model.Cart, error) 
     
     if err != nil {
         if err == sql.ErrNoRows {
-            return nil, nil // It's normal to not have a cart yet
+            return nil, nil
         }
         return nil, err
     }
@@ -64,7 +61,6 @@ func (r *PostgresCartRepository) Create(userID uint) (uint, error) {
     return id, nil
 }
 
-// GetCartItems gets cart items with product details
 func (r *PostgresCartRepository) GetCartItems(cartID uint) ([]model.CartItemDetail, error) {
 	rows, err := r.db.Query(`
 		SELECT ci.id, ci.product_id, p.name, p.price, ci.quantity
@@ -94,14 +90,12 @@ func (r *PostgresCartRepository) GetCartItems(cartID uint) ([]model.CartItemDeta
 	return items, nil
 }
 
-// AddItem adds an item to cart
 func (r *PostgresCartRepository) AddItem(cartID uint, productID uint, quantity int) error {
 	_, err := r.db.Exec("INSERT INTO cart_items (cart_id, product_id, quantity) VALUES ($1, $2, $3)",
 		cartID, productID, quantity)
 	return err
 }
 
-// UpdateItemQuantity updates cart item quantity
 func (r *PostgresCartRepository) UpdateItemQuantity(itemID uint, quantity int) error {
 	result, err := r.db.Exec("UPDATE cart_items SET quantity = $1, updated_at = NOW() WHERE id = $2",
 		quantity, itemID)
@@ -121,7 +115,6 @@ func (r *PostgresCartRepository) UpdateItemQuantity(itemID uint, quantity int) e
 	return nil
 }
 
-// RemoveItem removes an item from cart
 func (r *PostgresCartRepository) RemoveItem(itemID uint) error {
 	result, err := r.db.Exec("DELETE FROM cart_items WHERE id = $1", itemID)
 	if err != nil {
@@ -140,13 +133,11 @@ func (r *PostgresCartRepository) RemoveItem(itemID uint) error {
 	return nil
 }
 
-// ClearItems clears all items from cart
 func (r *PostgresCartRepository) ClearItems(cartID uint) error {
 	_, err := r.db.Exec("DELETE FROM cart_items WHERE cart_id = $1", cartID)
 	return err
 }
 
-// UpdateLastModified updates cart last modified timestamp
 func (r *PostgresCartRepository) UpdateLastModified(cartID uint) error {
 	_, err := r.db.Exec("UPDATE cart SET updated_at = NOW() WHERE id = $1", cartID)
 	return err
@@ -183,7 +174,7 @@ func (r *PostgresCartRepository) FindCartItemByProductID(cartID uint, productID 
     
     if err != nil {
         if err == sql.ErrNoRows {
-            return nil, nil // Item not found, but it's not an error
+            return nil, nil
         }
         return nil, err
     }

@@ -12,20 +12,20 @@ import (
 	"test-ordent/internal/repository"
 )
 
-// AuthHandler handles authentication related requests
 type AuthHandler struct {
-	userRepo    repository.UserRepository
-	jwtSecret   string
-	tokenExpiry time.Duration
+    userRepo    repository.UserRepository
+    jwtSecret   string
+    tokenExpiry time.Duration
+    adminSecret string
 }
 
-// NewAuthHandler creates a new auth handler
-func NewAuthHandler(userRepo repository.UserRepository, jwtSecret string, tokenExpiry time.Duration) *AuthHandler {
-	return &AuthHandler{
-		userRepo:    userRepo,
-		jwtSecret:   jwtSecret,
-		tokenExpiry: tokenExpiry,
-	}
+func NewAuthHandler(userRepo repository.UserRepository, jwtSecret string, tokenExpiry time.Duration, adminSecret string) *AuthHandler {
+    return &AuthHandler{
+        userRepo:    userRepo,
+        jwtSecret:   jwtSecret,
+        tokenExpiry: tokenExpiry,
+        adminSecret: adminSecret,
+    }
 }
 
 // Login godoc
@@ -45,18 +45,15 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "Invalid request"})
 	}
 
-	// Find user by username
 	user, err := h.userRepo.FindByUsername(req.Username)
 	if err != nil {
 		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Error: "Invalid credentials"})
 	}
 
-	// Compare passwords
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Error: "Invalid credentials"})
 	}
 
-	// Generate JWT token
 	token, err := auth.GenerateToken(user.ID, user.Role, h.jwtSecret, h.tokenExpiry)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to generate token"})
@@ -89,7 +86,6 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "Invalid request"})
 	}
 
-	// Check if username or email already exists
 	exists, err := h.userRepo.ExistsByUsernameOrEmail(req.Username, req.Email)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Database error"})
@@ -99,13 +95,11 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return c.JSON(http.StatusConflict, model.ErrorResponse{Error: "Username or email already exists"})
 	}
 
-	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to hash password"})
 	}
 
-	// Create new user
 	user := &model.User{
 		Username:     req.Username,
 		Email:        req.Email,
@@ -119,7 +113,6 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to create user"})
 	}
 
-	// Generate token
 	token, err := auth.GenerateToken(userID, "customer", h.jwtSecret, h.tokenExpiry)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to generate token"})
@@ -152,12 +145,10 @@ func (h *AuthHandler) RegisterAdmin(c echo.Context) error {
         return c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "Invalid request"})
     }
 
-    // Verify admin secret
-    if req.AdminSecret != "thisisaverysecretkey" {
+    if req.AdminSecret != h.adminSecret {
         return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Error: "Invalid admin secret"})
     }
 
-    // Check if username or email already exists
     exists, err := h.userRepo.ExistsByUsernameOrEmail(req.Username, req.Email)
     if err != nil {
         return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Database error"})
@@ -167,19 +158,17 @@ func (h *AuthHandler) RegisterAdmin(c echo.Context) error {
         return c.JSON(http.StatusConflict, model.ErrorResponse{Error: "Username or email already exists"})
     }
 
-    // Hash password
     hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
     if err != nil {
         return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to hash password"})
     }
 
-    // Create new admin user
     user := &model.User{
         Username:     req.Username,
         Email:        req.Email,
         PasswordHash: string(hashedPassword),
         FullName:     req.FullName,
-        Role:         "admin", // Set role to admin
+        Role:         "admin",
     }
 
     userID, err := h.userRepo.Create(user)
@@ -187,7 +176,6 @@ func (h *AuthHandler) RegisterAdmin(c echo.Context) error {
         return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to create user"})
     }
 
-    // Generate token
     token, err := auth.GenerateToken(userID, "admin", h.jwtSecret, h.tokenExpiry)
     if err != nil {
         return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to generate token"})

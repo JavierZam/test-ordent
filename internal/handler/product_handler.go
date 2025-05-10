@@ -10,12 +10,10 @@ import (
 	"test-ordent/internal/repository"
 )
 
-// ProductHandler handles product related requests
 type ProductHandler struct {
 	productRepo repository.ProductRepository
 }
 
-// NewProductHandler creates a new product handler
 func NewProductHandler(productRepo repository.ProductRepository) *ProductHandler {
 	return &ProductHandler{
 		productRepo: productRepo,
@@ -88,7 +86,6 @@ func (h *ProductHandler) CreateProduct(c echo.Context) error {
         return c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "Invalid request"})
     }
     
-    // Validate request
     if req.Name == "" {
         return c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "Product name is required"})
     }
@@ -134,7 +131,6 @@ func (h *ProductHandler) UpdateProduct(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "Invalid request"})
 	}
 
-	// Check if product exists
 	exists, err := h.productRepo.ExistsByID(id)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Database error"})
@@ -144,7 +140,6 @@ func (h *ProductHandler) UpdateProduct(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, model.ErrorResponse{Error: "Product not found"})
 	}
 
-	// Update product
 	product, err := h.productRepo.Update(id, &req)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to update product"})
@@ -172,7 +167,6 @@ func (h *ProductHandler) DeleteProduct(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "Invalid product ID"})
 	}
 
-	// Delete product
 	err = h.productRepo.Delete(id)
 	if err != nil {
 		if err.Error() == "product not found" {

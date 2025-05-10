@@ -8,7 +8,6 @@ import (
 	"test-ordent/internal/model"
 )
 
-// ProductRepository defines product related database operations
 type ProductRepository interface {
 	FindAll() ([]model.ProductResponse, error)
 	FindByID(id int) (*model.ProductResponse, error)
@@ -20,17 +19,14 @@ type ProductRepository interface {
 	GetStock(id int) (int, error)
 }
 
-// PostgresProductRepository implements ProductRepository with PostgreSQL
 type PostgresProductRepository struct {
 	db *sql.DB
 }
 
-// NewProductRepository creates a new product repository
 func NewProductRepository(db *sql.DB) ProductRepository {
 	return &PostgresProductRepository{db: db}
 }
 
-// FindAll finds all products
 func (r *PostgresProductRepository) FindAll() ([]model.ProductResponse, error) {
 	rows, err := r.db.Query("SELECT id, name, description, price, stock, category_id, image_url, created_at, updated_at FROM products")
 	if err != nil {
@@ -54,7 +50,6 @@ func (r *PostgresProductRepository) FindAll() ([]model.ProductResponse, error) {
 	return products, nil
 }
 
-// FindByID finds a product by ID
 func (r *PostgresProductRepository) FindByID(id int) (*model.ProductResponse, error) {
 	var p model.ProductResponse
 	err := r.db.QueryRow(
@@ -74,7 +69,7 @@ func (r *PostgresProductRepository) FindByID(id int) (*model.ProductResponse, er
 
 func (r *PostgresProductRepository) Create(product *model.ProductRequest) (*model.ProductResponse, error) {
     var p model.ProductResponse
-    var updatedAt sql.NullTime  // Use sql.NullTime for nullable time columns
+    var updatedAt sql.NullTime 
     
     err := r.db.QueryRow(
         `INSERT INTO products (name, description, price, stock, category_id, image_url, updated_at) 
@@ -87,7 +82,6 @@ func (r *PostgresProductRepository) Create(product *model.ProductRequest) (*mode
         return nil, err
     }
     
-    // Convert sql.NullTime to *time.Time
     if updatedAt.Valid {
         t := updatedAt.Time
         p.UpdatedAt = &t
@@ -99,7 +93,6 @@ func (r *PostgresProductRepository) Create(product *model.ProductRequest) (*mode
     return &p, nil
 }
 
-// Update updates a product
 func (r *PostgresProductRepository) Update(id int, product *model.ProductRequest) (*model.ProductResponse, error) {
 	var p model.ProductResponse
 	err := r.db.QueryRow(
@@ -119,7 +112,6 @@ func (r *PostgresProductRepository) Update(id int, product *model.ProductRequest
 	return &p, nil
 }
 
-// Delete deletes a product
 func (r *PostgresProductRepository) Delete(id int) error {
 	result, err := r.db.Exec("DELETE FROM products WHERE id = $1", id)
 	if err != nil {
@@ -138,7 +130,6 @@ func (r *PostgresProductRepository) Delete(id int) error {
 	return nil
 }
 
-// ExistsByID checks if a product exists by ID
 func (r *PostgresProductRepository) ExistsByID(id int) (bool, error) {
 	var exists bool
 	err := r.db.QueryRow("SELECT EXISTS(SELECT 1 FROM products WHERE id = $1)", id).Scan(&exists)

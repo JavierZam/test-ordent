@@ -38,7 +38,6 @@ func NewCartHandler(cartRepo repository.CartRepository, productRepo repository.P
 func (h *CartHandler) GetCart(c echo.Context) error {
 	userID := c.Get("user_id").(uint)
 
-	// Get or create cart
 	cart, err := h.cartRepo.FindByUserID(userID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Database error"})
@@ -46,7 +45,6 @@ func (h *CartHandler) GetCart(c echo.Context) error {
 
 	var cartID uint
 	if cart == nil {
-		// Create new cart if not exists
 		cartID, err = h.cartRepo.Create(userID)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to create cart"})
@@ -55,13 +53,11 @@ func (h *CartHandler) GetCart(c echo.Context) error {
 		cartID = cart.ID
 	}
 
-	// Get cart items
 	items, err := h.cartRepo.GetCartItems(cartID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Database error"})
 	}
 
-	// Calculate total
 	var total float64
 	for _, item := range items {
 		total += item.Subtotal
@@ -95,7 +91,6 @@ func (h *CartHandler) AddItem(c echo.Context) error {
         return c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "Invalid request"})
     }
 
-    // Check if product exists and has enough stock
     stock, err := h.productRepo.GetStock(int(req.ProductID))
     if err != nil {
         if err.Error() == "product not found" {
@@ -108,14 +103,18 @@ func (h *CartHandler) AddItem(c echo.Context) error {
         return c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "Not enough stock"})
     }
 
-    // Start transaction
     tx, err := h.db.Begin()
     if err != nil {
         return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to begin transaction"})
     }
-    defer tx.Rollback()
+    
+    var txErr error
+    defer func() {
+        if txErr != nil {
+            tx.Rollback()
+        }
+    }()
 
-    // Get or create cart
     cart, err := h.cartRepo.FindByUserID(userID)
     if err != nil {
         return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Database error"})
@@ -123,7 +122,6 @@ func (h *CartHandler) AddItem(c echo.Context) error {
 
     var cartID uint
     if cart == nil {
-        // Create new cart
         cartID, err = h.cartRepo.Create(userID)
         if err != nil {
             return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to create cart"})
@@ -132,7 +130,6 @@ func (h *CartHandler) AddItem(c echo.Context) error {
         cartID = cart.ID
     }
 
-    // Check if product already in cart
     cartItem, err := h.cartRepo.FindCartItemByProductID(cartID, req.ProductID)
     if err != nil {
         return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Database error"})
@@ -140,14 +137,12 @@ func (h *CartHandler) AddItem(c echo.Context) error {
 
     var totalQuantity int
     if cartItem == nil {
-        // Add new cart item
         err = h.cartRepo.AddItem(cartID, req.ProductID, req.Quantity)
         if err != nil {
             return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to add item to cart"})
         }
         totalQuantity = req.Quantity
     } else {
-        // Update existing cart item
         newQuantity := cartItem.Quantity + req.Quantity
         if newQuantity > stock {
             return c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "Not enough stock"})
@@ -157,27 +152,24 @@ func (h *CartHandler) AddItem(c echo.Context) error {
         if err != nil {
             return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to update cart item"})
         }
-        totalQuantity = req.Quantity // Only decrease stock for the newly added quantity
+        totalQuantity = req.Quantity
     }
 
-    // Decrease product stock
     err = h.productRepo.DecreaseStock(int(req.ProductID), totalQuantity)
     if err != nil {
         return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to update product stock: " + err.Error()})
     }
 
-    // Update cart last modified
     err = h.cartRepo.UpdateLastModified(cartID)
     if err != nil {
         return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to update cart"})
     }
 
-    // Commit transaction
-    if err = tx.Commit(); err != nil {
+	if err = tx.Commit(); err != nil {
+        txErr = err
         return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to commit transaction"})
     }
-
-    // Get updated cart
+    
     return h.GetCart(c)
 }
 
@@ -202,7 +194,6 @@ func (h *CartHandler) RemoveItem(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "Invalid item ID"})
 	}
 
-	// Get cart
 	cart, err := h.cartRepo.FindByUserID(userID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Database error"})
@@ -211,7 +202,6 @@ func (h *CartHandler) RemoveItem(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, model.ErrorResponse{Error: "Cart not found"})
 	}
 
-	// Get cart item
 	cartItem, err := h.cartRepo.FindCartItemByID(uint(itemID))
 	if err != nil {
 		if err.Error() == "cart item not found" {
@@ -220,23 +210,19 @@ func (h *CartHandler) RemoveItem(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Database error"})
 	}
 
-	// Check if item belongs to user's cart
 	if cartItem.CartID != cart.ID {
 		return c.JSON(http.StatusNotFound, model.ErrorResponse{Error: "Item not found in your cart"})
 	}
 
-	// Remove cart item
 	err = h.cartRepo.RemoveItem(uint(itemID))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to remove item from cart"})
 	}
 
-	// Update cart last modified
 	err = h.cartRepo.UpdateLastModified(cart.ID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to update cart"})
 	}
 
-	// Get updated cart
 	return h.GetCart(c)
 }

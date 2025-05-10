@@ -48,12 +48,10 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
         return c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "Invalid request"})
     }
     
-    // Validate shipping address
     if req.ShippingAddress == "" {
         return c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "Shipping address is required"})
     }
     
-    // Get cart
     cart, err := h.cartRepo.FindByUserID(userID)
     if err != nil {
         return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to get cart"})
@@ -63,7 +61,6 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
         return c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "Cart is empty"})
     }
     
-    // Get cart items
     items, err := h.cartRepo.GetCartItems(cart.ID)
     if err != nil {
         return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to get cart items"})
@@ -73,27 +70,22 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
         return c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "Cart is empty"})
     }
     
-    // Calculate total and prepare order items
     var total float64
     orderItems := make([]model.OrderItem, 0, len(items))
     
     for _, item := range items {
-        // Get product details
         product, err := h.productRepo.FindByID(int(item.ProductID))
         if err != nil {
             return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to get product"})
         }
         
-        // Check stock
         if product.Stock < item.Quantity {
             return c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: fmt.Sprintf("Not enough stock for product: %s", product.Name)})
         }
         
-        // Calculate item total
         itemTotal := product.Price * float64(item.Quantity)
         total += itemTotal
         
-        // Add to order items
         orderItems = append(orderItems, model.OrderItem{
             ProductID: item.ProductID,
             Quantity:  item.Quantity,
@@ -102,13 +94,11 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
         })
     }
     
-    // Create order with transaction
     orderID, err := h.orderRepo.CreateOrder(userID, total, req.ShippingAddress, orderItems, cart.ID)
     if err != nil {
         return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to create order: " + err.Error()})
     }
     
-    // Get order details
     order, err := h.orderRepo.FindByID(orderID)
     if err != nil {
         return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to get order"})
@@ -130,13 +120,11 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 func (h *OrderHandler) GetOrders(c echo.Context) error {
 	userID := c.Get("user_id").(uint)
 
-	// Get orders
 	orders, err := h.orderRepo.FindByUserID(userID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "Database error"})
 	}
 
-	// Get order items for each order
 	for i := range orders {
 		orderItems, err := h.orderRepo.GetOrderItems(orders[i].ID)
 		if err != nil {

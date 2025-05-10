@@ -2,7 +2,6 @@ package model
 
 import "time"
 
-// Cart represents a user's shopping cart
 type Cart struct {
 	ID        uint      `json:"id"`
 	UserID    uint      `json:"user_id"`
@@ -11,7 +10,6 @@ type Cart struct {
 	Items     []CartItem `json:"items,omitempty"`
 }
 
-// CartItem represents an item in a shopping cart
 type CartItem struct {
 	ID        uint      `json:"id"`
 	CartID    uint      `json:"cart_id"`
@@ -27,14 +25,12 @@ type AddToCartRequest struct {
     Quantity  int  `json:"quantity" validate:"required,min=1"`
 }
 
-// CartResponse represents cart response
 type CartResponse struct {
 	ID    uint             `json:"id"`
 	Items []CartItemDetail `json:"items"`
 	Total float64          `json:"total"`
 }
 
-// CartItemDetail represents cart item with product details
 type CartItemDetail struct {
 	ID        uint    `json:"id"`
 	ProductID uint    `json:"product_id"`

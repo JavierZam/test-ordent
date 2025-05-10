@@ -8,7 +8,6 @@ import (
 	"test-ordent/internal/model"
 )
 
-// OrderRepository defines order related database operations
 type OrderRepository interface {
 	Create(userID uint, totalAmount float64, shippingAddress string) (uint, error)
 	AddOrderItem(orderID uint, productID uint, quantity int, price float64) error
@@ -19,17 +18,14 @@ type OrderRepository interface {
 	CreateOrder(userID uint, total float64, shippingAddress string, items []model.OrderItem, cartID uint) (uint, error)
 }
 
-// PostgresOrderRepository implements OrderRepository with PostgreSQL
 type PostgresOrderRepository struct {
 	db *sql.DB
 }
 
-// NewOrderRepository creates a new order repository
 func NewOrderRepository(db *sql.DB) OrderRepository {
 	return &PostgresOrderRepository{db: db}
 }
 
-// Create creates a new order
 func (r *PostgresOrderRepository) Create(userID uint, totalAmount float64, shippingAddress string) (uint, error) {
 	var id uint
 	err := r.db.QueryRow(`
@@ -43,7 +39,6 @@ func (r *PostgresOrderRepository) Create(userID uint, totalAmount float64, shipp
 	return id, nil
 }
 
-// AddOrderItem adds an item to order
 func (r *PostgresOrderRepository) AddOrderItem(orderID uint, productID uint, quantity int, price float64) error {
 	_, err := r.db.Exec(`
 		INSERT INTO order_items (order_id, product_id, quantity, price)
@@ -67,7 +62,6 @@ func (r *PostgresOrderRepository) FindByID(id uint) (*model.Order, error) {
     return &order, nil
 }
 
-// FindByUserID finds orders by user ID
 func (r *PostgresOrderRepository) FindByUserID(userID uint) ([]model.OrderResponse, error) {
 	rows, err := r.db.Query(`
 		SELECT id, total_amount, status, shipping_address, created_at
@@ -98,7 +92,6 @@ func (r *PostgresOrderRepository) FindByUserID(userID uint) ([]model.OrderRespon
 	return orders, nil
 }
 
-// GetOrderItems gets order items with product details
 func (r *PostgresOrderRepository) GetOrderItems(orderID uint) ([]model.OrderItemDetail, error) {
 	rows, err := r.db.Query(`
 		SELECT oi.product_id, p.name, oi.price, oi.quantity
@@ -137,14 +130,12 @@ func (r *PostgresOrderRepository) AddItem(orderID uint, productID uint, quantity
 }
 
 func (r *PostgresOrderRepository) CreateOrder(userID uint, total float64, shippingAddress string, items []model.OrderItem, cartID uint) (uint, error) {
-    // Start transaction
     tx, err := r.db.Begin()
     if err != nil {
         return 0, err
     }
     defer tx.Rollback()
     
-    // Create order
     var orderID uint
     err = tx.QueryRow(`
         INSERT INTO orders (user_id, total_amount, status, shipping_address, created_at, updated_at)
@@ -156,7 +147,6 @@ func (r *PostgresOrderRepository) CreateOrder(userID uint, total float64, shippi
         return 0, err
     }
     
-    // Create order items
     for _, item := range items {
         _, err = tx.Exec(`
             INSERT INTO order_items (order_id, product_id, quantity, price, subtotal, created_at, updated_at)
@@ -167,7 +157,6 @@ func (r *PostgresOrderRepository) CreateOrder(userID uint, total float64, shippi
             return 0, err
         }
         
-        // Decrease product stock
         _, err = tx.Exec(`
             UPDATE products 
             SET stock = stock - $1, updated_at = CURRENT_TIMESTAMP 
@@ -179,13 +168,11 @@ func (r *PostgresOrderRepository) CreateOrder(userID uint, total float64, shippi
         }
     }
     
-    // Clear cart
     _, err = tx.Exec("DELETE FROM cart_items WHERE cart_id = $1", cartID)
     if err != nil {
         return 0, err
     }
     
-    // Commit transaction
     if err = tx.Commit(); err != nil {
         return 0, err
     }

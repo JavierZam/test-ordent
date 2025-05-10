@@ -35,7 +35,6 @@ import (
 // @name Authorization
 // @description Type "Bearer" followed by a space and the JWT token.
 func main() {
-	// Load configuration
 	cfg, err := loadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
@@ -44,41 +43,33 @@ func main() {
 		log.Fatal("JWT secret cannot be empty")
 	}
 
-	// Initialize logger
 	logger := initLogger(cfg.Server.Debug)
 
-	// Initialize database connection
     db, err := database.NewPostgresConnection(cfg.Database)
     if err != nil {
         logger.Fatal("Failed to connect to database:", err)
     }
     defer db.Close()
 
-	// Initialize repositories
     userRepo := repository.NewUserRepository(db)
     productRepo := repository.NewProductRepository(db)
     cartRepo := repository.NewCartRepository(db)
     orderRepo := repository.NewOrderRepository(db)
 
-	// Initialize Echo
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 
-	// Initialize JWT middleware
 	jwtMiddleware := auth.NewJWTMiddleware(cfg.Auth.JWTSecret)
 
-	// Register routes
 	api := e.Group("/api")
 	
-	// Auth routes
-	authHandler := handler.NewAuthHandler(userRepo, cfg.Auth.JWTSecret, cfg.Auth.TokenExpiry)
+	authHandler := handler.NewAuthHandler(userRepo, cfg.Auth.JWTSecret, cfg.Auth.TokenExpiry, cfg.Auth.AdminSecret)
 	api.POST("/auth/login", authHandler.Login)
 	api.POST("/auth/register", authHandler.Register)
 	api.POST("/auth/admin-register", authHandler.RegisterAdmin)
 
-	// Product routes
 	productHandler := handler.NewProductHandler(productRepo)
 	api.GET("/products", productHandler.GetProducts)
 	api.GET("/products/:id", productHandler.GetProduct)
@@ -86,18 +77,15 @@ func main() {
 	api.PUT("/products/:id", productHandler.UpdateProduct, jwtMiddleware.RequireAdmin)
 	api.DELETE("/products/:id", productHandler.DeleteProduct, jwtMiddleware.RequireAdmin)
 
-	// Cart routes
 	cartHandler := handler.NewCartHandler(cartRepo, productRepo, db)
 	api.GET("/cart", cartHandler.GetCart, jwtMiddleware.RequireAuth)
 	api.POST("/cart/items", cartHandler.AddItem, jwtMiddleware.RequireAuth)
 	api.DELETE("/cart/items/:id", cartHandler.RemoveItem, jwtMiddleware.RequireAuth)
 
-	// Order routes
     orderHandler := handler.NewOrderHandler(orderRepo, cartRepo, productRepo, db)
     api.POST("/orders", orderHandler.CreateOrder, jwtMiddleware.RequireAuth)
     api.GET("/orders", orderHandler.GetOrders, jwtMiddleware.RequireAuth)
 
-	// Categories routes
 	api.GET("/categories", func(c echo.Context) error {
 		rows, err := db.Query("SELECT id, name, description FROM categories")
 		if err != nil {
@@ -124,10 +112,8 @@ func main() {
 		})
 	})
 
-	// Swagger documentation
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
-	// Start server
 	serverAddr := fmt.Sprintf(":%d", cfg.Server.Port)
 	logger.Info(fmt.Sprintf("Server starting on %s", serverAddr))
 	if err := e.Start(serverAddr); err != http.ErrServerClosed {
@@ -135,7 +121,6 @@ func main() {
 	}
 }
 
-// loadConfig loads application configuration
 func loadConfig() (*config.Config, error) {
 	configPath := os.Getenv("CONFIG_PATH")
 	if configPath == "" {
@@ -145,7 +130,6 @@ func loadConfig() (*config.Config, error) {
 	return config.LoadConfig(configPath)
 }
 
-// initLogger initializes the logger
 func initLogger(debug bool) *logger.Logger {
 	return logger.NewLogger(debug)
 }
