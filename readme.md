@@ -57,10 +57,9 @@ Aplikasi mengikuti arsitektur berlapis seperti yang ditunjukkan di bawah ini:
 ### Menjalankan Aplikasi Secara Lokal
 
 1. Clone repositori
-2. Salin `.env.example` ke `.env` dan sesuaikan dengan lingkungan Anda
-3. Buat database PostgreSQL
-4. Jalankan migrasi database (file SQL tersedia di direktori `migrations`)
-5. Jalankan aplikasi:
+2. Salin config dan sesuaikan dengan lingkungan Anda
+3. Buat database PostgreSQL dan tablenya dari query.sql
+4. Jalankan aplikasi:
    ```bash
    go run cmd/server/main.go
    ```
@@ -72,17 +71,6 @@ Aplikasi mengikuti arsitektur berlapis seperti yang ditunjukkan di bawah ini:
 - Go 1.20 atau lebih baru
 - PostgreSQL
 - Docker (opsional)
-
-### Menjalankan Aplikasi Secara Lokal
-
-1. Clone repositori
-2. Salin `.env.example` ke `.env` dan sesuaikan dengan lingkungan Anda
-3. Buat database PostgreSQL
-4. Jalankan migrasi database (file SQL tersedia di direktori `migrations`)
-5. Jalankan aplikasi:
-   ```bash
-   go run cmd/server/main.go
-   ```
 
 ### Menjalankan dengan Docker
 

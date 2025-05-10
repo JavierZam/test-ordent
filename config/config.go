@@ -54,15 +54,15 @@ func LoadConfig(path string) (*Config, error) {
             Host:            "localhost",
             Port:            5432,
             User:            "postgres",
-            Password:        "postgres",
-            DBName:          "ecommerce",
+            Password:        "password123",
+            DBName:          "testordentdb",
             SSLMode:         "disable",
             MaxOpenConns:    20,
             MaxIdleConns:    5,
             ConnMaxLifetime: time.Hour,
         },
         Auth: AuthConfig{
-            JWTSecret:   "default-jwt-secret-key",
+            JWTSecret:   "super-secure-jwt-secret-key-123",
             TokenExpiry: 24 * time.Hour,
         },
     }
